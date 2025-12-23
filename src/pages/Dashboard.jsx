@@ -3,7 +3,9 @@ import { useAuth } from "../auth/authContext";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
 import AddApplicationDialog from "../components/AddApplicationDialog";
-
+import ApplicationTable from "../components/ApplicationTable";
+import DashboardHeader from "../components/DashboardHeader";
+import StatsCards from "../components/StatsCards";
 const Dashboard = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,8 +29,10 @@ const Dashboard = () => {
       await api.delete(`/applications/${id}`);
       setApplications(applications.filter((app) => app._id !== id));
     } catch (err) {
-      alert("Delete failed");
+      console.error("DELETE ERROR:", err.response?.data || err);
+      alert(err.response?.data?.message || "Delete failed");
     }
+
   };
   const updateStatus = async (id, status) => {
     try {
@@ -38,16 +42,12 @@ const Dashboard = () => {
         applications.map((app) => (app._id === id ? res.data : app))
       );
     } catch (err) {
-      alert("Update failed");
+      console.error("UPDATE ERROR:", err.response?.data || err);
+      alert(err.response?.data?.message || "Update failed");
     }
+
   };
   const addApplication = async (companyName, role, status,appliedDate) => {
-    console.log({
-      companyName,
-      role,
-      status,
-      appliedDate,
-    });
 
     try {
       const res = await api.post("/applications", {
@@ -66,39 +66,46 @@ const Dashboard = () => {
 
   };
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+ if (loading) {
+   return (
+     <div className="flex h-screen items-center justify-center">Loading...</div>
+   );
+ }
 
-  return (
-    <div>
-      <h2>My Applications</h2>
-      <button onClick={logout}>Logout</button>
-      <AddApplicationDialog onAdd={addApplication} />
-      {applications.length === 0 ? (
-        <p>No Applications Yet</p>
-      ) : (
-        <ul>
-          {applications.map((app) => {
-            return (
-              <li key={app._id}>
-                <strong>{app.companyName}</strong>-{app.role}- {app.status}{" "}
-                <select
-                  value={app.status}
-                  onChange={(e) => updateStatus(app._id, e.target.value)}
-                >
-                  <option value="applied">Applied</option>
-                  <option value="interview">Interview</option>
-                  <option value="offer">Offer</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-                <button onClick={() => handleDelete(app._id)}>Delete</button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
-};
+ if (error) {
+   return (
+     <div className="flex h-screen items-center justify-center text-red-600">
+       {error}
+     </div>
+   );
+ }
+
+    return (
+      <div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white">
+        <DashboardHeader total={applications.length} onLogout={logout} />
+
+        <div className="mx-auto max-w-6xl p-6 space-y-6">
+          <AddApplicationDialog onAdd={addApplication} />
+
+          {applications.length > 0 && (
+            <StatsCards applications={applications} />
+          )}
+
+          {applications.length === 0 ? (
+            <div className="rounded-lg bg-white dark:bg-gray-800 p-6 text-center text-gray-500 dark:text-gray-400">
+              No applications yet. Add your first one.
+            </div>
+          ) : (
+            <ApplicationTable
+              applications={applications}
+              onDelete={handleDelete}
+              onStatusChange={updateStatus}
+            />
+          )}
+        </div>
+      </div>
+    );
+
+}
 
 export default Dashboard;
